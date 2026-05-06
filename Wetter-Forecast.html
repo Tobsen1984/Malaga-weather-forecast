@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Málaga Golf • Turnier-Forecast 10.–16. Mai 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sun: #F5A623; --sky: #2176AE; --green: #2D6A4F; --fairway: #52B788;
+    --sand: #C9A84C; --cloud: #8FAFC7; --rain: #4A90BF; --wind: #6AABB8;
+    --bg: #0A1628; --card: #111E33; --card2: #162038; --text: #E8EFF7;
+    --muted: #7A93B0; --border: #1E3050;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+ 
+  .hero {
+    background:linear-gradient(135deg,#0A1628 0%,#0D2040 50%,#0A1628 100%);
+    padding:32px 32px 24px; border-bottom:1px solid var(--border); position:relative; overflow:hidden;
+  }
+  .hero::before {
+    content:''; position:absolute; top:-60px; right:-60px; width:300px; height:300px;
+    background:radial-gradient(circle,rgba(245,166,35,0.12) 0%,transparent 70%); pointer-events:none;
+  }
+  .hero-title { font-family:'Bebas Neue',sans-serif; font-size:clamp(32px,6vw,60px); letter-spacing:3px; color:#fff; line-height:1; }
+  .hero-title span { color:var(--sun); }
+  .hero-meta { display:flex; align-items:center; gap:16px; margin-top:8px; flex-wrap:wrap; }
+  .hero-sub { font-size:12px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; font-family:'DM Mono',monospace; }
+  .live-badge {
+    display:inline-flex; align-items:center; gap:5px; background:rgba(82,183,136,0.15);
+    border:1px solid rgba(82,183,136,0.4); border-radius:20px; padding:3px 10px;
+    font-size:11px; color:var(--fairway); font-family:'DM Mono',monospace;
+  }
+  .live-dot { width:6px; height:6px; border-radius:50%; background:var(--fairway); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+ 
+  .tabs { display:flex; padding:0 32px; background:var(--card); border-bottom:1px solid var(--border); overflow-x:auto; }
+  .tab {
+    padding:13px 18px; font-size:11px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s;
+    white-space:nowrap; background:none; border-top:none; border-left:none; border-right:none;
+    font-family:'DM Mono',monospace;
+  }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--sun); border-bottom-color:var(--sun); }
+ 
+  .section { display:none; padding:24px 32px; }
+  .section.active { display:block; }
+ 
+  .loading-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; gap:16px; color:var(--muted); }
+  .spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--sun); border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .loading-text { font-family:'DM Mono',monospace; font-size:12px; letter-spacing:1px; }
+  .error-state { background:rgba(191,74,74,0.1); border:1px solid rgba(191,74,74,0.3); border-radius:10px; padding:16px 20px; font-size:13px; color:#E07070; font-family:'DM Mono',monospace; }
+ 
+  .day-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:14px; margin-bottom:24px; }
+  .day-card { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:transform 0.2s,box-shadow 0.2s; }
+  .day-card:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(0,0,0,0.4); }
+  .day-card.today { border-color:rgba(245,166,35,0.5); }
+ 
+  .day-header { display:flex; justify-content:space-between; align-items:center; padding:13px 16px 9px; border-bottom:1px solid var(--border); }
+  .day-name { font-family:'Bebas Neue',sans-serif; font-size:21px; letter-spacing:1px; color:#fff; }
+  .day-date { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+  .today-label { font-size:9px; background:rgba(245,166,35,0.2); color:var(--sun); border-radius:4px; padding:2px 6px; font-family:'DM Mono',monospace; letter-spacing:1px; }
+  .day-course { font-size:11px; color:var(--fairway); font-weight:500; padding:6px 16px; font-family:'DM Mono',monospace; border-bottom:1px solid var(--border); }
+  .day-body { padding:12px 16px; }
+ 
+  .condition-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:500; margin-bottom:10px; }
+  .cond-sunny    { background:rgba(245,166,35,0.15); color:var(--sun);     border:1px solid rgba(245,166,35,0.3); }
+  .cond-cloudy   { background:rgba(143,175,199,0.15);color:var(--cloud);   border:1px solid rgba(143,175,199,0.3); }
+  .cond-rain     { background:rgba(74,144,191,0.15); color:var(--rain);    border:1px solid rgba(74,144,191,0.3); }
+  .cond-partcloud{ background:rgba(82,183,136,0.1);  color:var(--fairway); border:1px solid rgba(82,183,136,0.3); }
+ 
+  .weather-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+  .w-item { background:var(--card2); border-radius:8px; padding:9px 11px; }
+  .w-label { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:3px; }
+  .w-value { font-size:17px; font-weight:700; color:var(--text); font-family:'Bebas Neue',sans-serif; letter-spacing:1px; }
+  .w-value.hot   { color:var(--sun); }
+  .w-value.windy { color:var(--wind); }
+  .w-value.rainy { color:var(--rain); }
+  .w-value.ok    { color:var(--fairway); }
+  .w-sub { font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; }
+  .temp-bar { width:100%; height:4px; background:var(--border); border-radius:3px; margin-top:6px; overflow:hidden; }
+  .temp-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--sky),var(--sun)); }
+ 
+  .hourly-bar { display:flex; gap:4px; overflow-x:auto; padding-bottom:4px; margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+  .hour-block { flex-shrink:0; text-align:center; background:var(--card2); border-radius:6px; padding:5px 7px; min-width:44px; }
+  .hour-time { font-size:9px; color:var(--muted); font-family:'DM Mono',monospace; }
+  .hour-temp { font-size:13px; font-family:'Bebas Neue',sans-serif; color:var(--sun); }
+  .hour-icon { font-size:14px; }
+ 
+  .sun-row { display:flex; gap:12px; font-size:11px; font-family:'DM Mono',monospace; color:var(--muted); margin-top:10px; border-top:1px solid var(--border); padding-top:10px; }
+  .sun-item { display:flex; gap:4px; align-items:center; }
+ 
+  .section-header { display:flex; align-items:baseline; gap:14px; margin-bottom:18px; }
+  .section-title { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; color:#fff; }
+  .section-note { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; letter-spacing:1px; }
+ 
+  .alert-box { background:rgba(74,144,191,0.1); border:1px solid rgba(74,144,191,0.3); border-radius:10px; padding:12px 16px; margin-bottom:18px; display:flex; gap:10px; align-items:flex-start; }
+  .alert-icon { font-size:18px; flex-shrink:0; }
+  .alert-text { font-size:13px; color:var(--text); line-height:1.5; }
+  .alert-text strong { color:var(--sun); }
+ 
+  .strategy-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:24px; }
+  @media(max-width:680px) { .strategy-grid{grid-template-columns:1fr} .day-grid{grid-template-columns:1fr} }
+ 
+  .strat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:0; }
+  .strat-title { font-family:'Bebas Neue',sans-serif; font-size:19px; letter-spacing:1.5px; color:var(--sun); margin-bottom:3px; }
+  .strat-sub { font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; margin-bottom:14px; letter-spacing:1px; text-transform:uppercase; }
+  .strat-item { display:flex; gap:11px; padding:9px 0; border-bottom:1px solid var(--border); }
+  .strat-item:last-child { border-bottom:none; padding-bottom:0; }
+  .strat-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; margin-top:1px; }
+  .icon-driver { background:rgba(245,166,35,0.15); }
+  .icon-iron   { background:rgba(33,118,174,0.2); }
+  .icon-wind   { background:rgba(106,171,184,0.15); }
+  .strat-text { flex:1; }
+  .strat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--sun); margin-bottom:2px; font-family:'DM Mono',monospace; }
+  .strat-desc { font-size:12px; color:var(--text); line-height:1.5; }
+  .strat-desc em { color:var(--muted); font-style:normal; font-size:11px; }
+ 
+  .mental-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin-bottom:24px; }
+  .mental-card { background:var(--card); border:1px solid var(--border); border-left:3px solid var(--fairway); border-radius:8px; padding:14px; }
+  .mental-day   { font-family:'Bebas Neue',sans-serif; font-size:12px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; margin-bottom:2px; }
+  .mental-title { font-family:'Bebas Neue',sans-serif; font-size:19px; letter-spacing:1px; color:var(--text); margin-bottom:7px; }
+  .mental-focus { background:rgba(45,106,79,0.15); border-radius:6px; padding:7px 9px; font-size:11px; color:var(--fairway); font-family:'DM Mono',monospace; margin-bottom:7px; }
+  .mental-text  { font-size:12px; color:var(--muted); line-height:1.5; }
+ 
+  .footer-note { text-align:center; padding:18px; font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; border-top:1px solid var(--border); letter-spacing:1px; }
+  #last-updated { font-size:10px; color:var(--muted); font-family:'DM Mono',monospace; }
+</style>
+</head>
+<body>
+ 
+<div class="hero">
+  <div class="hero-title">MÁLAGA<span>.</span>GOLF<span>.</span>26</div>
+  <div class="hero-meta">
+    <div class="hero-sub">⛳ 10.–16. Mai 2026 · Costa del Sol</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE WETTERDATEN</div>
+    <div id="last-updated"></div>
+  </div>
+</div>
+ 
+<div class="tabs">
+  <button class="tab active" onclick="showTab('weather',this)">☀ Wetter-Forecast</button>
+  <button class="tab" onclick="showTab('strategy',this)">🏌 Schlagstrategie</button>
+  <button class="tab" onclick="showTab('mental',this)">🧠 Mental-Plan</button>
+</div>
+ 
+<!-- TAB 1: WETTER -->
+<div class="section active" id="tab-weather">
+  <div class="section-header">
+    <div class="section-title">7-TAGE FORECAST</div>
+    <div class="section-note">Open-Meteo API · Málaga 36.72°N / 4.42°W · CEST</div>
+  </div>
+  <div id="weather-content">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div class="loading-text">Lade Live-Wetterdaten für Málaga…</div>
+    </div>
+  </div>
+</div>
+ 
+<!-- TAB 2: STRATEGIE -->
+<div class="section" id="tab-strategy">
+  <div class="section-header">
+    <div class="section-title">SCHLAGSTRATEGIE</div>
+    <div class="section-note">Malaga · Küstenplätze mit Poniente-Wind</div>
+  </div>
+  <div class="alert-box">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text">
+      Costa del Sol: Alle Kurse bergig-küstennah. Typisch: enge Fairways, trockenes/schnelles Rough, Grüns flacher als sie aussehen.
+      <strong>Wind aus S/SO = gegen den natürlichen Links-Rechts-Bias</strong> – dein Low Hook wird je nach Windrichtung bestraft oder begünstigt.
+    </div>
+  </div>
+  <div class="strategy-grid">
+    <div class="strat-card">
+      <div class="strat-title">🏌 DRIVER-STRATEGIE</div>
+      <div class="strat-sub">Je nach Lochtyp</div>
+      <div class="strat-item">
+        <div class="strat-icon icon-driver">🎯</div>
+        <div class="strat-text">
+          <div class="strat-label">Weite, offene Par-5</div>
+          <div class="strat-desc">Driver voll – aber bewusst auf <strong>3/4-Schwung-Tempo</strong> reduzieren. Mit SO-Wind von links: leichtes Fade-Targeting auf linke Fairway-Hälfte. <em>→ Verhindert Low-Hook ins Rough.</em></div>
+        </div>
+      </div>
+      <div class="strat-item">
+        <div class="strat-icon icon-driver">⚠️</div>
+        <div class="strat-text">
+          <div class="strat-label">Enge Fairways (OB rechts/links)</div>
+          <div class="strat-desc"><strong>3-Holz oder 5er-Hybrid statt Driver.</strong> Auf Lauro (Hügel) oder Alhaurin (Seitenwind) lieber 20m kürzer, aber Fairway. <em>→ Score-Sicherheit vor Ego-Abschlag.</em></div>
+        </div>
+      </div>
+      <div class="strat-item">
+        <div class="strat-icon icon-wind">💨</div>
+        <div class="strat-text">
+          <div class="strat-label">Gegenwind (S/SO frontal)</div>
+          <div class="strat-desc">Ball 1cm weiter rechts im Stand, Schwungtempo runter. <strong>Ziel: niedrige Ballfluglinie</strong> die im Wind stabil bleibt. <em>→ Lieber 6er-Eisen als Driver bei Gegenwind.</em></div>
+        </div>
+      </div>
+      <div class="strat-item">
+        <div class="strat-icon icon-driver">🔄</div>
+        <div class="strat-text">
+          <div class="strat-label">Low-Hook Prävention</div>
+          <div class="strat-desc">Starker Griff → geschlossenes Clubface → Hook. Vor jedem Abschlag: max. 2 Knöchel sichtbar links. <strong>Pre-shot: Grip → Ausrichtung → Tempo.</strong> <em>→ Gibt Struktur wenn Druck steigt.</em></div>
+        </div>
+      </div>
+    </div>
+    <div class="strat-card">
+      <div class="strat-title">⛳ EISEN-STRATEGIE</div>
+      <div class="strat-sub">Mittlere & kurze Eisen · Approaches</div>
+      <div class="strat-item">
+        <div class="strat-icon icon-iron">📐</div>
+        <div class="strat-text">
+          <div class="strat-label">Distanz-Kalkulation mit Wind</div>
+          <div class="strat-desc">Faustregel: <strong>15 km/h Rückenwind = 1 Schläger kürzer.</strong> 20 km/h Gegenwind = +1 bis +2 Schläger. Beispiel: 150m = 7er → Gegenwind → 5er. <em>→ Konsequent, nicht schätzen.</em></div>
+        </div>
+      </div>
+      <div class="strat-item">
+        <div class="strat-icon icon-iron">🎯</div>
+        <div class="strat-text">
+          <div class="strat-label">Par-3 Taktik</div>
+          <div class="strat-desc">Nie auf Pin – immer <strong>Greenmitte als Ziel.</strong> Trockene Grüns rollen Ball weiter: <strong>kurz landen, rollen lassen.</strong> <em>→ Bump & Run über hohen Pitch.</em></div>
+        </div>
+      </div>
+      <div class="strat-item">
+        <div class="strat-icon icon-iron">🏔</div>
+        <div class="strat-text">
+          <div class="strat-label">Bergauf / Bergab (Alhaurin, Lauro)</div>
+          <div class="strat-desc">Bergauf: 1–2 Schläger länger. Bergab: 1 Schläger kürzer, Ball etwas nach hinten. <strong>Liegungswinkel Prio vor Zielpräzision.</strong> <em>→ Erst sauber treffen.</em></div>
+        </div>
+      </div>
+      <div class="strat-item">
+        <div class="strat-icon icon-iron">💧</div>
+        <div class="strat-text">
+          <div class="strat-label">Trockene, harte Fairways</div>
+          <div class="strat-desc">Ball sauber aufnehmen, leicht absteigend. <strong>Griff fester (7/10), Schwung kürzer</strong> – verhindert Fat-Shot. Ab 30m: Bump & Run wenn möglich. <em>→ Lob-Wedge nur erzwungen.</em></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="strat-card" style="margin-bottom:20px">
+    <div class="strat-title">🌊 KURS-SPEZIFISCHE HINWEISE</div>
+    <div class="strat-sub">7 Plätze · Costa del Sol</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-top:8px">
+      <div style="background:var(--card2);border-radius:8px;padding:11px"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px">SO 10.5 · SANTA CLARA</div><div style="font-size:12px;color:var(--text)">Nachmittagsabschlag 14:20. Sonne frontal. Cap & Sonnenbrille Pflicht.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px">MO 11.5 · TORREQUEBRADA</div><div style="font-size:12px;color:var(--text)">Meeresnähe → SO-Wind böig. Küsten-Löcher: Driver nur mit Fade sicher.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px">DI 12.5 · ANORETA GOLF</div><div style="font-size:12px;color:var(--text)">Mittag 12:08 – heißeste Zeit. Hydration, Sonnenschutz. Entspanntes Tempo.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px">MI 13.5 · ALHAURIN</div><div style="font-size:12px;color:var(--text)">Früh 9:30 – kühler, ruhigerer Wind. Bergab: Ball läuft weit über Grün.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px">DO 14.5 · HIGUERÓN</div><div style="font-size:12px;color:var(--text)">Berghanglage, Wind dreht durch Täler. Approaches: sicherer Carry über Schluchten.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px">FR 15.5 · LA CALA / AMERICA</div><div style="font-size:12px;color:var(--text)">Nachmittag 13:30. Gut gepflegte Fairways, berechenbare Grüns.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px"><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px">SA 16.5 · LAURO GOLF</div><div style="font-size:12px;color:var(--text)">Früh 9:03 – frischer Morgen. Enger Kurs: 3-Holz > Driver auf 60% der Löcher.</div></div>
+    </div>
+  </div>
+</div>
+ 
+<!-- TAB 3: MENTAL -->
+<div class="section" id="tab-mental">
+  <div class="section-header">
+    <div class="section-title">7-TAGE MENTAL-PLAN</div>
+    <div class="section-note">Turniermodus · Täglicher Fokus-Rahmen</div>
+  </div>
+  <div class="alert-box">
+    <div class="alert-icon">🧠</div>
+    <div class="alert-text">
+      Grundprinzip: <strong>Prozess &gt; Ergebnis.</strong> Jeder Abschlag ist isoliert. Score vergessen bis Loch 18.
+      Ziel: Kein Loch mental abschreiben. Handicap 17 → Realziel: <strong>85–88 pro Runde, kein Blow-up über +3.</strong>
+    </div>
+  </div>
+  <div class="mental-grid">
+    <div class="mental-card" style="border-left-color:var(--sun)">
+      <div class="mental-day">Tag 1 · So 10. Mai</div>
+      <div class="mental-title">ANKUNFT & RESET</div>
+      <div class="mental-focus">🎯 Fokus: Einchecken – keine Erwartungen</div>
+      <div class="mental-text">Warmup: 20 Chips, 10 Putts, 5 Driver – nicht mehr. Ziel Runde 1: <strong>Flow finden, kein Score-Denken.</strong> Jede ungewohnte Situation als neutral labeln.</div>
+    </div>
+    <div class="mental-card" style="border-left-color:var(--sky)">
+      <div class="mental-day">Tag 2 · Mo 11. Mai</div>
+      <div class="mental-title">AUFBAU-RUNDE</div>
+      <div class="mental-focus">🎯 Fokus: Pre-Shot Routine konsequent</div>
+      <div class="mental-text">Routine als Anker: Grip → Ausrichtung → 1 Blick Ziel → Schwung. <strong>Immer gleich, immer dasselbe.</strong> Nach Tag 1: 3-Satz-Notiz – was hat funktioniert?</div>
+    </div>
+    <div class="mental-card" style="border-left-color:var(--fairway)">
+      <div class="mental-day">Tag 3 · Di 12. Mai</div>
+      <div class="mental-title">MITTE DER WOCHE</div>
+      <div class="mental-focus">🎯 Fokus: Schlechte Löcher sofort loslassen</div>
+      <div class="mental-text">Ab Tag 3 kommt Müdigkeit. Bogey → <strong>3 Atemzüge, Loch abhaken.</strong> Doppelbogey = "teures Lernen". Kein Loch darf das nächste vergiften.</div>
+    </div>
+    <div class="mental-card" style="border-left-color:var(--cloud)">
+      <div class="mental-day">Tag 4 · Mi 13. Mai</div>
+      <div class="mental-title">WIND-TAG</div>
+      <div class="mental-focus">🎯 Fokus: Wind als gleiche Bedingung für alle</div>
+      <div class="mental-text">Wind bringt alle auf Augenhöhe. <strong>Schlägerauswahl akzeptieren, Schwung nicht forcieren.</strong> Wer den Wind bekämpft verliert. Bogeys bei Wind = Par-Äquivalent.</div>
+    </div>
+    <div class="mental-card" style="border-left-color:var(--sand)">
+      <div class="mental-day">Tag 5 · Do 14. Mai</div>
+      <div class="mental-title">ENERGIE-MANAGEMENT</div>
+      <div class="mental-focus">🎯 Fokus: Zwischen Löchern vollständig abschalten</div>
+      <div class="mental-text">Tag 5 = häufigster Blow-up-Tag. Zwischen Löchern abschalten. <strong>Erst am Ball wieder "an".</strong> Konservativ spielen: lieber 1 Schläger mehr, Fairway halten.</div>
+    </div>
+    <div class="mental-card" style="border-left-color:var(--rain)">
+      <div class="mental-day">Tag 6 · Fr 15. Mai</div>
+      <div class="mental-title">ZWEITE LUFT</div>
+      <div class="mental-focus">🎯 Fokus: Stärken aktivieren – Short Game</div>
+      <div class="mental-text">Deine Stärken: Approaches & Short Game. <strong>Tag 6 = Short Game Tag.</strong> Jeder gelochte Putt unter 3m als Energieschub. Keine Hero-Shots auf Par-5.</div>
+    </div>
+    <div class="mental-card" style="border-left-color:var(--sun)">
+      <div class="mental-day">Tag 7 · Sa 16. Mai</div>
+      <div class="mental-title">ABSCHLUSS-RUNDE</div>
+      <div class="mental-focus">🎯 Fokus: Genießen & beste Runde der Woche</div>
+      <div class="mental-text">Kein Druck mehr. <strong>Spielen wie Tag 1, aber mit 6 Runden Erfahrung.</strong> Lauro morgens → frischer Kopf, kühles Wetter = ideale Bedingungen.</div>
+    </div>
+  </div>
+  <div class="strat-card">
+    <div class="strat-title">📋 TÄGLICHES RESET-PROTOKOLL</div>
+    <div class="strat-sub">Nach jeder Runde · 10 Minuten</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:8px">
+      <div style="background:var(--card2);border-radius:8px;padding:11px;text-align:center"><div style="font-size:22px;margin-bottom:5px">✅</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:3px">POSITIV</div><div style="font-size:11px;color:var(--text)">1 Schlag der heute perfekt war notieren</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px;text-align:center"><div style="font-size:22px;margin-bottom:5px">🎯</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:3px">MORGEN</div><div style="font-size:11px;color:var(--text)">1 Justierung für nächste Runde. Nicht mehr.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px;text-align:center"><div style="font-size:22px;margin-bottom:5px">🚿</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:3px">ABSCHALTEN</div><div style="font-size:11px;color:var(--text)">Runde loslassen. Kein Golf-Talk beim Abendessen.</div></div>
+      <div style="background:var(--card2);border-radius:8px;padding:11px;text-align:center"><div style="font-size:22px;margin-bottom:5px">😴</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:3px">REGENERATION</div><div style="font-size:11px;color:var(--text)">7h Schlaf Mindest. Hydration nach jeder Runde.</div></div>
+    </div>
+  </div>
+</div>
+ 
+<div class="footer-note">Daten: Open-Meteo API (open-meteo.com) · 36.72°N, 4.42°W · Aktualisiert bei jedem Öffnen der Seite</div>
+ 
+<script>
+const SCHEDULE = [
+  { date:'2026-05-10', day:'Sonntag',    course:'Santa Clara Golf',   tee:'14:20' },
+  { date:'2026-05-11', day:'Montag',     course:'Torrequebrada',      tee:'15:12' },
+  { date:'2026-05-12', day:'Dienstag',   course:'Anoreta Golf',       tee:'12:08' },
+  { date:'2026-05-13', day:'Mittwoch',   course:'Alhaurin Golf',      tee:'09:30' },
+  { date:'2026-05-14', day:'Donnerstag', course:'Higuerón Marbella',  tee:'13:20' },
+  { date:'2026-05-15', day:'Freitag',    course:'La Cala / America',  tee:'13:30' },
+  { date:'2026-05-16', day:'Samstag',    course:'Lauro Golf',         tee:'09:03' },
+];
+ 
+function decodeWMO(code) {
+  if (code === 0)  return { label:'Strahlend sonnig', icon:'☀️', cls:'cond-sunny' };
+  if (code <= 2)   return { label:'Teils bewölkt',    icon:'⛅', cls:'cond-partcloud' };
+  if (code === 3)  return { label:'Bewölkt',           icon:'☁️', cls:'cond-cloudy' };
+  if (code <= 49)  return { label:'Neblig',            icon:'🌫', cls:'cond-cloudy' };
+  if (code <= 67)  return { label:'Regen',             icon:'🌧', cls:'cond-rain' };
+  if (code <= 82)  return { label:'Regenschauer',      icon:'🌦', cls:'cond-rain' };
+  if (code <= 99)  return { label:'Gewitter',          icon:'⛈', cls:'cond-rain' };
+  return { label:'Wechselhaft', icon:'🌤', cls:'cond-partcloud' };
+}
+ 
+function windDir(deg) {
+  const dirs = ['N','NO','O','SO','S','SW','W','NW'];
+  return dirs[Math.round(deg/45)%8];
+}
+ 
+function formatTime(iso) {
+  if (!iso) return '--';
+  // ISO string like "2026-05-10T07:06" — just slice
+  return iso.slice(11,16);
+}
+ 
+function tempFill(t) { return Math.min(100, Math.max(20, ((t-15)/15)*100)); }
+ 
+async function loadWeather() {
+  const container = document.getElementById('weather-content');
+  try {
+    const params = new URLSearchParams({
+      latitude:  36.72,
+      longitude: -4.42,
+      daily: [
+        'weather_code','temperature_2m_max','temperature_2m_min',
+        'precipitation_sum','precipitation_probability_max',
+        'windspeed_10m_max','winddirection_10m_dominant',
+        'sunrise','sunset','uv_index_max'
+      ].join(','),
+      hourly: 'temperature_2m,weather_code',
+      timezone: 'Europe/Madrid',
+      start_date: '2026-05-10',
+      end_date:   '2026-05-16',
+      wind_speed_unit: 'kmh',
+    });
+ 
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?' + params);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    renderWeather(data);
+ 
+    const now = new Date();
+    const ts = now.toLocaleString('de-DE',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',timeZone:'Europe/Madrid'});
+    document.getElementById('last-updated').textContent = 'Stand: ' + ts;
+ 
+  } catch(err) {
+    container.innerHTML = `<div class="error-state">⚠ Wetterdaten konnten nicht geladen werden.<br>Fehler: ${err.message}<br><br>Bitte Seite neu laden.</div>`;
+  }
+}
+ 
+function renderWeather(data) {
+  const d = data.daily;
+  const h = data.hourly;
+  const todayStr = new Date().toISOString().slice(0,10);
+ 
+  // Build hourly lookup
+  const hourlyByDate = {};
+  h.time.forEach((t,i) => {
+    const date = t.slice(0,10);
+    if (!hourlyByDate[date]) hourlyByDate[date] = [];
+    hourlyByDate[date].push({ time:t.slice(11,16), temp:Math.round(h.temperature_2m[i]), code:h.weather_code[i] });
+  });
+ 
+  const maxWind  = Math.max(...d.windspeed_10m_max.filter(Boolean));
+  const maxUV    = Math.max(...d.uv_index_max.filter(Boolean));
+  const totalRain = d.precipitation_sum.reduce((a,b)=>(a||0)+(b||0), 0);
+ 
+  let alertHtml = `
+    <div class="alert-box">
+      <div class="alert-icon">💨</div>
+      <div class="alert-text">
+        <strong>Wind diese Woche:</strong> Max. ${Math.round(maxWind)} km/h ·
+        <strong>UV-Index max. ${Math.round(maxUV)}</strong> – Sonnenschutz obligatorisch ·
+        Gesamtniederschlag: ${totalRain.toFixed(1)} mm – <strong>${totalRain < 5 ? 'Trocken, ideale Bedingungen' : 'Leichter Regen möglich'}.</strong>
+      </div>
+    </div>`;
+ 
+  let cardsHtml = '<div class="day-grid">';
+ 
+  SCHEDULE.forEach((slot, i) => {
+    const idx = d.time.indexOf(slot.date);
+    if (idx === -1) return;
+ 
+    const wmo   = decodeWMO(d.weather_code[idx]);
+    const tMax  = Math.round(d.temperature_2m_max[idx]);
+    const tMin  = Math.round(d.temperature_2m_min[idx]);
+    const rain  = Math.round(d.precipitation_probability_max[idx] || 0);
+    const wind  = Math.round(d.windspeed_10m_max[idx]);
+    const wDir  = windDir(d.winddirection_10m_dominant[idx]);
+    const prec  = (d.precipitation_sum[idx] || 0).toFixed(1);
+    const rise  = formatTime(d.sunrise[idx]);
+    const set_  = formatTime(d.sunset[idx]);
+    const uv    = Math.round(d.uv_index_max[idx] || 0);
+    const isToday = slot.date === todayStr;
+ 
+    // Daylight duration
+    let daylight = '–';
+    if (d.sunrise[idx] && d.sunset[idx]) {
+      const rH = new Date(d.sunrise[idx]).getTime();
+      const sH = new Date(d.sunset[idx]).getTime();
+      daylight = ((sH - rH) / 3600000).toFixed(1) + 'h';
+    }
+ 
+    const rainCls = rain < 10 ? 'ok' : rain < 30 ? '' : 'rainy';
+    const uvLabel = uv >= 8 ? 'Sehr hoch ⚠' : uv >= 6 ? 'Hoch' : 'Mittel';
+ 
+    // Hourly strip
+    const keyHours = ['07:00','09:00','11:00','13:00','15:00','17:00','19:00'];
+    const dayH = hourlyByDate[slot.date] || [];
+    const hourBlocks = keyHours.map(hr => {
+      const found = dayH.find(x => x.time === hr);
+      if (!found) return '';
+      return `<div class="hour-block">
+        <div class="hour-time">${hr}</div>
+        <div class="hour-icon">${decodeWMO(found.code).icon}</div>
+        <div class="hour-temp">${found.temp}°</div>
+      </div>`;
+    }).join('');
+ 
+    cardsHtml += `
+      <div class="day-card${isToday?' today':''}">
+        <div class="day-header">
+          <div>
+            <div class="day-name">${slot.day.toUpperCase()}</div>
+            <div class="day-date">${slot.date.slice(8,10)}. Mai 2026</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <span style="font-size:26px">${wmo.icon}</span>
+            ${isToday?'<span class="today-label">HEUTE</span>':''}
+          </div>
+        </div>
+        <div class="day-course">📍 ${slot.course} · ${slot.tee} Uhr</div>
+        <div class="day-body">
+          <span class="condition-badge ${wmo.cls}">${wmo.label}</span>
+          <div class="weather-row">
+            <div class="w-item">
+              <div class="w-label">Temp Max / Min</div>
+              <div class="w-value hot">${tMax}° / ${tMin}°</div>
+              <div class="w-sub">Málaga Küste</div>
+              <div class="temp-bar"><div class="temp-fill" style="width:${tempFill(tMax)}%"></div></div>
+            </div>
+            <div class="w-item">
+              <div class="w-label">Wind max.</div>
+              <div class="w-value windy">${wind} km/h</div>
+              <div class="w-sub">Richtung: ${wDir}</div>
+            </div>
+          </div>
+          <div class="weather-row">
+            <div class="w-item">
+              <div class="w-label">Regen-Chance</div>
+              <div class="w-value ${rainCls}">${rain}%</div>
+              <div class="w-sub">${prec} mm erwartet</div>
+            </div>
+            <div class="w-item">
+              <div class="w-label">UV-Index</div>
+              <div class="w-value" style="color:var(--sand)">${uv}</div>
+              <div class="w-sub">${uvLabel}</div>
+            </div>
+          </div>
+          <div class="hourly-bar">${hourBlocks}</div>
+          <div class="sun-row">
+            <div class="sun-item"><span>🌅</span><span>${rise}</span></div>
+            <div class="sun-item"><span>🌇</span><span>${set_}</span></div>
+            <div class="sun-item"><span>☀</span><span>${daylight} Licht</span></div>
+          </div>
+        </div>
+      </div>`;
+  });
+ 
+  cardsHtml += '</div>';
+  document.getElementById('weather-content').innerHTML = alertHtml + cardsHtml;
+}
+ 
+function showTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+}
+ 
+loadWeather();
+</script>
+</body>
+</html>
+ 
