@@ -85,10 +85,12 @@
   .temp-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--sky),var(--sun)); }
  
   .hourly-bar { display:flex; gap:4px; overflow-x:auto; padding-bottom:4px; margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
-  .hour-block { flex-shrink:0; text-align:center; background:var(--card2); border-radius:6px; padding:5px 7px; min-width:44px; }
+  .hour-block { flex-shrink:0; text-align:center; background:var(--card2); border-radius:6px; padding:7px 8px; min-width:58px; }
   .hour-time { font-size:9px; color:var(--muted); font-family:'DM Mono',monospace; }
   .hour-temp { font-size:13px; font-family:'Bebas Neue',sans-serif; color:var(--sun); }
   .hour-icon { font-size:14px; }
+  .hour-detail { font-size:8px; color:var(--muted); font-family:'DM Mono',monospace; margin-top:4px; line-height:1.2; }
+  .hour-rel { font-size:8px; color:var(--muted); font-family:'DM Mono',monospace; margin-top:4px; }
  
   .sun-row { display:flex; gap:12px; font-size:11px; font-family:'DM Mono',monospace; color:var(--muted); margin-top:10px; border-top:1px solid var(--border); padding-top:10px; }
   .sun-item { display:flex; gap:4px; align-items:center; }
@@ -361,11 +363,13 @@ function formatTime(iso) {
 
 function getRelativeHourWindow(tee) {
   const [h, m] = tee.split(':').map(Number);
-  const baseHour = Math.round((h * 60 + m) / 60);
+  const base = h * 60 + m;
   const hours = [];
   for (let offset = -1; offset <= 6; offset++) {
-    const hour = baseHour + offset;
-    const time = String(hour).padStart(2, '0') + ':00';
+    const total = ((base + offset * 60) + 1440) % 1440;
+    const hour = Math.floor(total / 60);
+    const minute = total % 60;
+    const time = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
     const rel = offset === 0 ? 'Tee' : offset < 0 ? `${offset}h` : `+${offset}h`;
     hours.push({ time, rel });
   }
@@ -386,7 +390,7 @@ async function loadWeather() {
         'windspeed_10m_max','winddirection_10m_dominant',
         'sunrise','sunset','uv_index_max'
       ].join(','),
-      hourly: 'temperature_2m,weather_code',
+      hourly: 'temperature_2m,weather_code,windspeed_10m,winddirection_10m,precipitation_probability',
       timezone: 'Europe/Madrid',
       start_date: '2026-05-10',
       end_date:   '2026-05-16',
@@ -417,7 +421,14 @@ function renderWeather(data) {
   h.time.forEach((t,i) => {
     const date = t.slice(0,10);
     if (!hourlyByDate[date]) hourlyByDate[date] = [];
-    hourlyByDate[date].push({ time:t.slice(11,16), temp:Math.round(h.temperature_2m[i]), code:h.weather_code[i] });
+    hourlyByDate[date].push({
+      time: t.slice(11,16),
+      temp: Math.round(h.temperature_2m[i]),
+      code: h.weather_code[i],
+      wind: Math.round(h.windspeed_10m ? h.windspeed_10m[i] : 0),
+      dir: h.winddirection_10m ? h.winddirection_10m[i] : null,
+      precip: Math.round(h.precipitation_probability ? h.precipitation_probability[i] : 0),
+    });
   });
  
   const maxWind  = Math.max(...d.windspeed_10m_max.filter(Boolean));
@@ -466,6 +477,17 @@ function renderWeather(data) {
     // Hourly strip
     const relativeWindow = getRelativeHourWindow(slot.tee);
     const dayH = hourlyByDate[slot.date] || [];
+    const windowEntries = relativeWindow
+      .map(entry => ({ ...entry, data: dayH.find(x => x.time === entry.time) }))
+      .filter(entry => entry.data);
+    const summaryTemp = windowEntries.length ? Math.round(windowEntries.reduce((sum, entry) => sum + entry.data.temp, 0) / windowEntries.length) : '--';
+    const summaryWind = windowEntries.length ? Math.max(...windowEntries.map(entry => entry.data.wind || 0)) : '--';
+    const summaryPrecip = windowEntries.length ? Math.max(...windowEntries.map(entry => entry.data.precip || 0)) : '--';
+    const summaryWindDir = windowEntries.length ? windDir(windowEntries.find(entry => entry.data.wind === summaryWind)?.data.dir || 0) : '--';
+    const forecastSummary = windowEntries.length
+      ? `${summaryTemp}° · ${summaryWind} km/h ${summaryWindDir} · Regen bis ${summaryPrecip}%`
+      : 'Keine stündlichen Daten im Forecast verfügbar';
+ 
     const hourBlocks = relativeWindow.map(entry => {
       const found = dayH.find(x => x.time === entry.time);
       if (!found) {
@@ -473,14 +495,15 @@ function renderWeather(data) {
           <div class="hour-time">${entry.time}</div>
           <div class="hour-icon">—</div>
           <div class="hour-temp">--</div>
-          <div class="w-sub" style="font-size:9px;color:var(--muted);margin-top:4px">${entry.rel}</div>
+          <div class="hour-rel">${entry.rel}</div>
         </div>`;
       }
       return `<div class="hour-block">
         <div class="hour-time">${entry.time}</div>
         <div class="hour-icon">${decodeWMO(found.code).icon}</div>
         <div class="hour-temp">${found.temp}°</div>
-        <div class="w-sub" style="font-size:9px;color:var(--muted);margin-top:4px">${entry.rel}</div>
+        <div class="hour-detail">💨 ${found.wind} km/h · 🌧 ${found.precip}%</div>
+        <div class="hour-rel">${entry.rel}</div>
       </div>`;
     }).join('');
  
@@ -498,7 +521,8 @@ function renderWeather(data) {
         </div>
         <div class="day-course">📍 ${slot.course} · ${slot.tee} Uhr</div>
         <div class="day-body">
-          <div class="w-sub" style="margin-bottom:10px">Forecast: 1 Stunde vor Startzeit bis Startzeit +6 Stunden</div>
+          <div class="w-sub" style="margin-bottom:6px">Forecast: 1 Stunde vor Startzeit bis Startzeit +6 Stunden</div>
+          <div class="w-sub" style="margin-bottom:10px">${forecastSummary}</div>
           <span class="condition-badge ${wmo.cls}">${wmo.label}</span>
           <div class="weather-row">
             <div class="w-item">
