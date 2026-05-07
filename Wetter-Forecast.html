@@ -358,6 +358,19 @@ function formatTime(iso) {
   // ISO string like "2026-05-10T07:06" — just slice
   return iso.slice(11,16);
 }
+
+function getRelativeHourWindow(tee) {
+  const [h, m] = tee.split(':').map(Number);
+  const baseHour = Math.round((h * 60 + m) / 60);
+  const hours = [];
+  for (let offset = -1; offset <= 6; offset++) {
+    const hour = baseHour + offset;
+    const time = String(hour).padStart(2, '0') + ':00';
+    const rel = offset === 0 ? 'Tee' : offset < 0 ? `${offset}h` : `+${offset}h`;
+    hours.push({ time, rel });
+  }
+  return hours;
+}
  
 function tempFill(t) { return Math.min(100, Math.max(20, ((t-15)/15)*100)); }
  
@@ -451,15 +464,23 @@ function renderWeather(data) {
     const uvLabel = uv >= 8 ? 'Sehr hoch ⚠' : uv >= 6 ? 'Hoch' : 'Mittel';
  
     // Hourly strip
-    const keyHours = ['07:00','09:00','11:00','13:00','15:00','17:00','19:00'];
+    const relativeWindow = getRelativeHourWindow(slot.tee);
     const dayH = hourlyByDate[slot.date] || [];
-    const hourBlocks = keyHours.map(hr => {
-      const found = dayH.find(x => x.time === hr);
-      if (!found) return '';
+    const hourBlocks = relativeWindow.map(entry => {
+      const found = dayH.find(x => x.time === entry.time);
+      if (!found) {
+        return `<div class="hour-block">
+          <div class="hour-time">${entry.time}</div>
+          <div class="hour-icon">—</div>
+          <div class="hour-temp">--</div>
+          <div class="w-sub" style="font-size:9px;color:var(--muted);margin-top:4px">${entry.rel}</div>
+        </div>`;
+      }
       return `<div class="hour-block">
-        <div class="hour-time">${hr}</div>
+        <div class="hour-time">${entry.time}</div>
         <div class="hour-icon">${decodeWMO(found.code).icon}</div>
         <div class="hour-temp">${found.temp}°</div>
+        <div class="w-sub" style="font-size:9px;color:var(--muted);margin-top:4px">${entry.rel}</div>
       </div>`;
     }).join('');
  
@@ -477,6 +498,7 @@ function renderWeather(data) {
         </div>
         <div class="day-course">📍 ${slot.course} · ${slot.tee} Uhr</div>
         <div class="day-body">
+          <div class="w-sub" style="margin-bottom:10px">Forecast: 1 Stunde vor Startzeit bis Startzeit +6 Stunden</div>
           <span class="condition-badge ${wmo.cls}">${wmo.label}</span>
           <div class="weather-row">
             <div class="w-item">
